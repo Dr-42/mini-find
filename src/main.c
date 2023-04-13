@@ -6,6 +6,8 @@
 #define ANSI_COLOR_RESET "\033[0m"
 #define ANSI_COLOR_GREEN "\033[32m"
 #define ANSI_COLOR_CYAN "\033[36m"
+#define ANSI_COLOR_BLUE "\033[34m"
+#define ANSI_COLOR_YELLOW "\033[33m"
 
 
 void find_file(const char *path, char *name)
@@ -26,10 +28,16 @@ void find_file(const char *path, char *name)
     do {
 	if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 	if (entry->d_type != DT_DIR) {
+	    if (strcmp(entry->d_name, name) == 0) {
+		printf(ANSI_COLOR_GREEN "File with name %s in %s\n" ANSI_COLOR_RESET, name, path);
+		printf("\tFull path: " ANSI_COLOR_YELLOW "%s/%s\n" ANSI_COLOR_RESET, path, entry->d_name);
+		continue;
+	    }
 	    //Check if search term is a substring of the file name
 	    if (strstr(entry->d_name, name) != NULL) {
-		printf(ANSI_COLOR_GREEN "Found %s in %s\n" ANSI_COLOR_RESET, name, path);
+		printf(ANSI_COLOR_BLUE "Partial match found in %s in %s\n" ANSI_COLOR_RESET, name, path);
 		printf("\tFull path: " ANSI_COLOR_CYAN "%s/%s\n" ANSI_COLOR_RESET, path, entry->d_name);
+		continue;
 	    } 
 	    if (lg) printf("[LOG] Not found jpg %s in %s \n", name, path);
 	    continue;
