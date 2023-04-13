@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     //command mini-find <path> <name>
 
     if (argc != 3) {
-	printf("Usage: mini-find <path> <name>\n");
+	printf("Usage: mini-find <root-path> <query>\n");
 	return 1;
     }
     printf("Search started in %s for %s \n", argv[1], argv[2]);
