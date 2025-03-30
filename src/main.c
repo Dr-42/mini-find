@@ -2,72 +2,72 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <errno.h>
 
 #define ANSI_COLOR_RESET "\033[0m"
+#define ANSI_COLOR_RED "\033[31m"
 #define ANSI_COLOR_GREEN "\033[32m"
 #define ANSI_COLOR_CYAN "\033[36m"
 #define ANSI_COLOR_BLUE "\033[34m"
 #define ANSI_COLOR_YELLOW "\033[33m"
 
-
-void find_file(const char *path, char *name)
-{
+void find_file(const char *path, char *name) {
     int lg = 0;
-    if (lg) printf("[LOG] Searching in %s for %s \n", path, name);
+    int elg = 1;
+    if (lg) printf("[LOG] Searching in %s for %s\n", path, name);
     DIR *dir;
     struct dirent *entry;
 
-    if (!(dir = opendir(path))){
-	if (lg) printf("Cannot open directory %s\n", path);
-	return;
-    };
-    if (!(entry = readdir(dir))) {
-	if (lg) printf("Cannot read directory %s\n", path);
+    errno = 0;
+    dir = opendir(path);
+    if (dir == NULL && elg) {
+	if (errno != 0) {
+	    printf("%sERROR:%s Error reading directory %s: %s\n", ANSI_COLOR_RED, ANSI_COLOR_RESET, path, strerror(errno));
+	}
 	return;
     }
-    do {
-	if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-	if (entry->d_type != DT_DIR) {
+
+    errno = 0;
+    while ((entry = readdir(dir)) != NULL) {
+	if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+	    continue;
+
+	if (entry->d_type == DT_DIR) {
+	    char *path_buf = malloc(strlen(path) + strlen(entry->d_name) + 2);
+	    if (path_buf == NULL) {
+		if (elg) printf("%sERROR:%s malloc failed: %s\n", ANSI_COLOR_RED, ANSI_COLOR_RESET, strerror(errno));
+		continue;
+	    }
+	    sprintf(path_buf, "%s/%s", path, entry->d_name);
+	    find_file(path_buf, name);
+	    if (lg) printf("[LOG] Recursively called find_file with %s\n", path_buf);
+	    free(path_buf);
+	} else {
 	    if (strcmp(entry->d_name, name) == 0) {
 		printf(ANSI_COLOR_GREEN "File with name %s in %s\n" ANSI_COLOR_RESET, name, path);
 		printf("\tFull path: " ANSI_COLOR_YELLOW "%s/%s\n" ANSI_COLOR_RESET, path, entry->d_name);
-		continue;
-	    }
-	    //Check if search term is a substring of the file name
-	    if (strstr(entry->d_name, name) != NULL) {
+	    } else if (strstr(entry->d_name, name) != NULL) {
 		printf(ANSI_COLOR_BLUE "Partial match found in %s in %s\n" ANSI_COLOR_RESET, name, path);
 		printf("\tFull path: " ANSI_COLOR_CYAN "%s/%s\n" ANSI_COLOR_RESET, path, entry->d_name);
-		continue;
-	    } 
-	    if (lg) printf("[LOG] Not found jpg %s in %s \n", name, path);
-	    continue;
+	    } else {
+		if (lg) printf("[LOG] Not found %s in %s\n", name, path);
+	    }
 	}
+    }
 
-	//If it is a directory, recursively call find_file
-	//with the new path
-	
-	//Create new path
-	char *path_buf = malloc(strlen(path) + strlen(entry->d_name) + 2);
-	strcpy(path_buf, path);
-	strcat(path_buf, "/");
-	strcat(path_buf, entry->d_name);
-	find_file(path_buf, name);
-	if (lg) {
-	    printf("[LOG] Recursively called find_file with %s \n", path_buf);
-	}
-	free(path_buf);
-    } while ((entry = readdir(dir)));
+    if (errno != 0) {
+	if (elg) printf("%sERROR:%s Error reading directory %s: %s\n", ANSI_COLOR_RED, ANSI_COLOR_RESET, path, strerror(errno));
+    }
+
+    closedir(dir);
 }
 
-int main(int argc, char *argv[])
-{
-    //command mini-find <path> <name>
-
+int main(int argc, char *argv[]) {
     if (argc != 3) {
 	printf("Usage: mini-find <root-path> <query>\n");
 	return 1;
     }
-    printf("Search started in %s for %s \n", argv[1], argv[2]);
+    printf("Search started in %s for %s\n", argv[1], argv[2]);
     find_file(argv[1], argv[2]);
     return 0;
 }
